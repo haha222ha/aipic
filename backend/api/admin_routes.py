@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response
 
-from core.security import get_current_admin, hash_password
+from core.security import get_current_admin, hash_password, _get_client_ip
 from core.database import global_db_conn, log_admin_operation
 from core.auth import create_auth_code
 from core.config import PACKAGES
@@ -34,7 +34,7 @@ async def freeze_user(request: Request, user_id: str, current_admin: dict = Depe
 
     log_admin_operation(
         current_admin['username'], "冻结用户", f"冻结用户 {user_id}",
-        request.client.host if request else "unknown"
+        _get_client_ip(request)
     )
     return {"code": 200, "msg": "用户已冻结", "data": None}
 
@@ -48,7 +48,7 @@ async def unfreeze_user(request: Request, user_id: str, current_admin: dict = De
 
     log_admin_operation(
         current_admin['username'], "解冻用户", f"解冻用户 {user_id}",
-        request.client.host if request else "unknown"
+        _get_client_ip(request)
     )
     return {"code": 200, "msg": "用户已解冻", "data": None}
 
@@ -101,7 +101,7 @@ async def generate_codes(request: Request, current_admin: dict = Depends(get_cur
     log_admin_operation(
         current_admin['username'], "生成授权码",
         f"生成{count}个{package_type}授权码，有效期{valid_days}天，含{credits}积分",
-        request.client.host if request else "unknown"
+        _get_client_ip(request)
     )
 
     return {"code": 200, "msg": f"成功生成{count}个授权码", "data": {"codes": codes}}
@@ -192,7 +192,7 @@ async def update_config(request: Request, current_admin: dict = Depends(get_curr
 
     log_admin_operation(
         current_admin['username'], "修改配置", str(data),
-        request.client.host if request else "unknown"
+        _get_client_ip(request)
     )
 
     return {"code": 200, "msg": "配置已更新", "data": None}
@@ -458,7 +458,7 @@ async def batch_generate_codes(request: Request, current_admin: dict = Depends(g
     log_admin_operation(
         current_admin['username'], "批量生成授权码",
         f"批次号:{batch_no}, 批次名:{batch_name}, 套餐:{package_type}, 数量:{count}, 积分:{credits}, 标签:{export_tag}",
-        request.client.host if request else "unknown"
+        _get_client_ip(request)
     )
 
     return {

@@ -72,7 +72,7 @@ class GenerateWorker:
                     credits_cost = task.get('credits_cost', 0)
                     if credits_cost > 0:
                         from core.database import refund_credits
-                        refund_credits(task['user_id'], credits_cost, f"生成失败退还：{task.get('prompt', '')[:20]}")
+                        self._safe_refund(task['user_id'], credits_cost, f"生成失败退还：{task.get('prompt', '')[:20]}")
 
                 self.current_task = None
                 self.current_task_info = None
@@ -89,17 +89,29 @@ class GenerateWorker:
                         if self.current_task_info:
                             credits_cost = self.current_task_info.get('credits_cost', 0)
                             if credits_cost > 0:
-                                from core.database import refund_credits
-                                refund_credits(
+                                self._safe_refund(
                                     self.current_task_info['user_id'],
                                     credits_cost,
                                     f"生成异常退还：{self.current_task_info.get('prompt', '')[:20]}"
                                 )
-                    except Exception:
-                        pass
+                    except Exception as inner_e:
+                        print(f"Worker异常处理失败: {inner_e}")
                     self.current_task = None
                     self.current_task_info = None
                 time.sleep(WORKER_INTERVAL)
+
+    def _safe_refund(self, user_id: str, credits_cost: int, description: str, max_retries: int = 3):
+        from core.database import refund_credits
+        for attempt in range(max_retries):
+            try:
+                result = refund_credits(user_id, credits_cost, description)
+                if result >= 0:
+                    return
+                print(f"积分退还失败(尝试{attempt + 1}/{max_retries}): 用户{user_id}, 积分{credits_cost}, 结果={result}")
+            except Exception as e:
+                print(f"积分退还异常(尝试{attempt + 1}/{max_retries}): 用户{user_id}, 积分{credits_cost}, 错误={e}")
+            time.sleep(1)
+        print(f"[严重] 积分退还最终失败: 用户{user_id}, 积分{credits_cost}, 描述={description}")
 
     def _execute_task(self, task: dict) -> dict:
         from services.generate_service import generate_image

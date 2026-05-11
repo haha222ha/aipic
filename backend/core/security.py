@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 import secrets
 import time
 from functools import wraps
@@ -15,7 +16,7 @@ from core.config import (
 )
 from core.auth import verify_user
 
-_ADMIN_SESSION_SECRET = secrets.token_hex(32)
+_ADMIN_SESSION_SECRET = os.environ.get("ADMIN_SESSION_SECRET") or secrets.token_hex(32)
 _admin_sessions: dict = {}
 
 

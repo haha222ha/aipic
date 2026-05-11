@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 
 from core.auth import activate_auth_code, create_auth_code
-from core.security import rate_limit, get_current_admin, verify_password, _sign_admin_token
+from core.security import rate_limit, get_current_admin, verify_password, _sign_admin_token, _get_client_ip
 from core.database import global_db_conn, log_admin_operation
 from core.config import PACKAGES
 
@@ -18,8 +18,8 @@ async def activate(request: Request):
 
     if result['code'] == 200:
         response = JSONResponse(result)
-        response.set_cookie("user_id", result['data']['user_id'], max_age=86400 * 30, httponly=True, samesite="lax")
-        response.set_cookie("auth_code", auth_code, max_age=86400 * 30, httponly=True, samesite="lax")
+        response.set_cookie("user_id", result['data']['user_id'], max_age=86400 * 30, httponly=True, samesite="lax", secure=True)
+        response.set_cookie("auth_code", auth_code, max_age=86400 * 30, httponly=True, samesite="lax", secure=True)
         return response
 
     return result
@@ -77,11 +77,11 @@ async def admin_login(request: Request):
     if not admin or not verify_password(password, admin['password_hash']):
         return {"code": 400, "msg": "用户名或密码错误", "data": None}
 
-    log_admin_operation(username, "登录", "管理员登录", request.client.host if request else "unknown")
+    log_admin_operation(username, "登录", "管理员登录", _get_client_ip(request))
 
     session_token = _sign_admin_token(username)
     response = JSONResponse({"code": 200, "msg": "登录成功", "data": {"username": username}})
-    response.set_cookie("admin_session", session_token, max_age=86400, httponly=True, samesite="lax")
+    response.set_cookie("admin_session", session_token, max_age=86400, httponly=True, samesite="lax", secure=True)
     response.delete_cookie("admin_username")
     return response
 

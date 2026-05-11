@@ -16,6 +16,7 @@ def get_global_db():
     conn = sqlite3.connect(GLOBAL_DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA wal_autocheckpoint=1000")
     return conn
 
 
@@ -228,8 +229,15 @@ def init_global_db():
 
 
 def get_user_db(user_id: str):
-    safe_uid = user_id.replace("USER_", "").replace("-", "_")
+    import re
+    safe_uid = re.sub(r'[^a-zA-Z0-9_]', '', user_id.replace("USER_", ""))
+    if not safe_uid:
+        safe_uid = "unknown"
     db_path = os.path.join(USER_DATA_DIR, f"user_data_{safe_uid}.db")
+    real_path = os.path.realpath(db_path)
+    real_data_dir = os.path.realpath(USER_DATA_DIR)
+    if not real_path.startswith(real_data_dir):
+        raise ValueError(f"Invalid user_id: {user_id}")
     conn = sqlite3.connect(db_path, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn

@@ -11,7 +11,7 @@ from core.database import (
 )
 from core.config import (
     SUPPORTED_MODELS, DEFAULT_MODEL, OPENAI_SUPPORTED_SIZES,
-    PACKAGES, QUALITY_TIERS, CREDIT_PACKAGES, PRESET_RATIOS,
+    PACKAGES, QUALITY_TIERS, CREDIT_PACKAGES, PRESET_RATIOS, MAX_QUEUE_SIZE,
 )
 
 router = APIRouter(prefix="/api/generate", tags=["生图模块"])
@@ -75,6 +75,13 @@ async def text2img(request: Request, current_user: dict = Depends(get_current_us
 
     ratio_info = PRESET_RATIOS[ratio_key]
     size_str = ratio_info['sizes'].get(quality, ratio_info['sizes']['standard'])
+
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM global_generate_queue WHERE task_status = '待执行'")
+        queue_count = cursor.fetchone()[0]
+        if queue_count >= MAX_QUEUE_SIZE:
+            return {"code": 429, "msg": "队列已满，请稍后再试", "data": None}
 
     if not deduct_credits(user_id, credits_cost, f"文生图 {quality} {ratio_info['label']}"):
         return {"code": 403, "msg": "积分扣费失败", "data": None}
@@ -158,6 +165,13 @@ async def img2img(request: Request, current_user: dict = Depends(get_current_use
         model_name = DEFAULT_MODEL
 
     ratio_info = PRESET_RATIOS[ratio_key]
+
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM global_generate_queue WHERE task_status = '待执行'")
+        queue_count = cursor.fetchone()[0]
+        if queue_count >= MAX_QUEUE_SIZE:
+            return {"code": 429, "msg": "队列已满，请稍后再试", "data": None}
 
     if not deduct_credits(user_id, credits_cost, f"图生图 {quality} {ratio_info['label']}"):
         return {"code": 403, "msg": "积分扣费失败", "data": None}
