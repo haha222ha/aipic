@@ -15,7 +15,13 @@ def create_admin(username: str, password: str):
         cursor = conn.cursor()
         cursor.execute("SELECT username FROM global_admin WHERE username = ?", (username,))
         if cursor.fetchone():
-            print(f"管理员 '{username}' 已存在")
+            password_hash = hash_password(password)
+            cursor.execute(
+                "UPDATE global_admin SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
+            conn.commit()
+            print(f"管理员 '{username}' 密码已重置")
             return
 
         password_hash = hash_password(password)
