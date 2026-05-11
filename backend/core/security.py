@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import secrets
 import time
 from functools import wraps
@@ -13,6 +14,27 @@ from core.config import (
     CONTENT_FILTER_ENABLED, CONTENT_FILTER_KEYWORDS,
 )
 from core.auth import verify_user
+
+_ADMIN_SESSION_SECRET = secrets.token_hex(32)
+_admin_sessions: dict = {}
+
+
+def _sign_admin_token(username: str) -> str:
+    raw = f"{username}:{_ADMIN_SESSION_SECRET}"
+    sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{username}:{sig}"
+
+
+def _verify_admin_token(token: str) -> Optional[str]:
+    try:
+        username, sig = token.rsplit(':', 1)
+        raw = f"{username}:{_ADMIN_SESSION_SECRET}"
+        expected_sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
+        if hmac.compare_digest(sig, expected_sig):
+            return username
+    except (ValueError, AttributeError):
+        pass
+    return None
 
 
 def hash_password(password: str) -> str:
@@ -30,6 +52,19 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
+def _get_client_ip(request: Request) -> str:
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip
+    x_real_ip = request.headers.get("x-real-ip")
+    if x_real_ip:
+        return x_real_ip
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.client.host if request else "unknown"
+
+
 _rate_limit_store: dict = {}
 
 
@@ -37,7 +72,7 @@ def rate_limit(limit: int = RATE_LIMIT_REQUESTS, time_window: int = RATE_LIMIT_W
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
-            client_ip = request.client.host if request else "unknown"
+            client_ip = _get_client_ip(request)
             key = f"{func.__name__}:{client_ip}"
             now = time.time()
 
@@ -146,9 +181,13 @@ async def get_current_user(request: Request) -> dict:
 
 
 async def get_current_admin(request: Request) -> dict:
-    admin_username = request.cookies.get("admin_username")
-    if not admin_username:
+    admin_token = request.cookies.get("admin_session")
+    if not admin_token:
         raise HTTPException(status_code=401, detail={"code": 401, "msg": "请先登录管理员账号", "data": None})
+
+    admin_username = _verify_admin_token(admin_token)
+    if not admin_username:
+        raise HTTPException(status_code=401, detail={"code": 401, "msg": "管理员会话已失效，请重新登录", "data": None})
 
     from core.database import global_db_conn
     with global_db_conn() as conn:
@@ -179,11 +218,18 @@ def require_auth(func):
 def require_admin(func):
     @wraps(func)
     async def wrapper(request: Request, *args, **kwargs):
-        admin_username = request.cookies.get("admin_username")
-        if not admin_username:
+        admin_token = request.cookies.get("admin_session")
+        if not admin_token:
             return JSONResponse(
                 status_code=401,
                 content={"code": 401, "msg": "请先登录管理员账号", "data": None}
+            )
+
+        admin_username = _verify_admin_token(admin_token)
+        if not admin_username:
+            return JSONResponse(
+                status_code=401,
+                content={"code": 401, "msg": "管理员会话已失效，请重新登录", "data": None}
             )
 
         from core.database import global_db_conn

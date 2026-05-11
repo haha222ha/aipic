@@ -200,6 +200,12 @@ async def update_config(request: Request, current_admin: dict = Depends(get_curr
 
 @router.post("/init_admin")
 async def init_admin(request: Request):
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM global_admin")
+        if cursor.fetchone()[0] > 0:
+            return {"code": 400, "msg": "管理员账号已存在，请使用脚本创建", "data": None}
+
     data = await request.json()
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
@@ -493,11 +499,7 @@ async def list_batches(request: Request, current_admin: dict = Depends(get_curre
 
 
 @router.get("/codes/export")
-async def export_codes(request: Request):
-    admin_username = request.cookies.get('admin_username')
-    if not admin_username:
-        return {"code": 401, "msg": "请先登录", "data": None}
-        
+async def export_codes(request: Request, current_admin: dict = Depends(get_current_admin)):
     batch_no = request.query_params.get('batch_no', '')
     package_type = request.query_params.get('package_type', '')
     status = request.query_params.get('status', '')

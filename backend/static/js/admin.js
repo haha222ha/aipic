@@ -28,14 +28,27 @@ async function handleAdminLogin(e) {
     e.preventDefault();
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
+    const errDiv = document.getElementById('loginError');
+    const loginBtn = e.target.querySelector('button[type="submit"]');
 
-    const res = await apiPost('/api/auth/admin/login', { username, password });
-    if (res.code === 200) {
-        showAdminContent();
-    } else {
-        const errDiv = document.getElementById('loginError');
-        errDiv.textContent = res.msg;
+    errDiv.style.display = 'none';
+    loginBtn.disabled = true;
+    loginBtn.textContent = '登录中...';
+
+    try {
+        const res = await apiPost('/api/auth/admin/login', { username, password });
+        if (res.code === 200) {
+            showAdminContent();
+        } else {
+            errDiv.textContent = res.msg || '登录失败';
+            errDiv.style.display = 'block';
+        }
+    } catch (err) {
+        errDiv.textContent = '网络错误，请重试';
         errDiv.style.display = 'block';
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
     }
 }
 

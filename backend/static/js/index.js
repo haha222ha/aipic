@@ -450,6 +450,22 @@ function initNavScroll() {
     });
 }
 
+function toggleMobileMenu() {
+    const hamburger = document.getElementById('navHamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.classList.toggle('active');
+    navLinks.classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+    const hamburger = document.getElementById('navHamburger');
+    const navLinks = document.getElementById('navLinks');
+    if (hamburger && navLinks && !hamburger.contains(e.target) && !navLinks.contains(e.target)) {
+        hamburger.classList.remove('active');
+        navLinks.classList.remove('open');
+    }
+});
+
 function navigateTo(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const target = document.getElementById(`page-${page}`);
@@ -458,6 +474,11 @@ function navigateTo(page) {
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
     if (navLink) navLink.classList.add('active');
+
+    const hamburger = document.getElementById('navHamburger');
+    const navLinks = document.getElementById('navLinks');
+    if (hamburger) hamburger.classList.remove('active');
+    if (navLinks) navLinks.classList.remove('open');
 
     if (page === 'studio' && !currentUserInfo) {
         navigateTo('login');
