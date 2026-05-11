@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtForge AI - 创意无限</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+    <div class="app" id="app">
+        <nav class="nav" id="mainNav">
+            <div class="nav-inner">
+                <a class="nav-logo" href="#" onclick="navigateTo('home')">
+                    <span class="logo-icon">&#9670;</span>
+                    <span class="logo-text">ArtForge</span>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <span class="nav-link active" data-page="home" onclick="navigateTo('home')">首页</span>
+                    <span class="nav-link" data-page="studio" onclick="navigateTo('studio')">创作工坊</span>
+                    <span class="nav-link" data-page="pricing" onclick="navigateTo('pricing')">定价</span>
+                    <span class="nav-link" data-page="gallery" onclick="navigateTo('gallery')">画廊</span>
+                    <span class="nav-link" data-page="credits" id="creditsNavLink" style="display:none;" onclick="navigateTo('credits')">消费记录</span>
+                </div>
+                <div class="nav-actions">
+                    <div class="credits-badge" id="creditsBadge" style="display:none;">
+                        <span class="credits-icon">&#9733;</span>
+                        <span id="creditsCount">0</span>
+                    </div>
+                    <button class="btn-ghost" id="loginBtn" onclick="navigateTo('login')">登录</button>
+                    <button class="btn-accent" id="studioBtn" style="display:none;" onclick="navigateTo('studio')">开始创作</button>
+                    <button class="btn-ghost" id="logoutBtn" style="display:none;" onclick="logout()">退出</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="page page-home active" id="page-home">
+            <section class="hero">
+                <div class="hero-bg">
+                    <canvas id="particleCanvas"></canvas>
+                    <div class="hero-orb orb-1 parallax-layer parallax-slow"></div>
+                    <div class="hero-orb orb-2 parallax-layer parallax-medium"></div>
+                    <div class="hero-orb orb-3 parallax-layer parallax-fast"></div>
+                    <div class="hero-grain"></div>
+                </div>
+                <div class="hero-content">
+                    <div class="hero-badge">GPT Image 2 驱动</div>
+                    <h1 class="hero-title">
+                        <span class="title-line">用想象力</span>
+                        <span class="title-line accent">锻造艺术</span>
+                    </h1>
+                    <p class="hero-desc">输入你的创意描述，AI即刻为你锻造独一无二的视觉杰作。从灵感到作品，只需一次心跳。</p>
+                    <div class="hero-actions">
+                        <button class="btn-hero-primary magnetic-btn" onclick="navigateTo('studio')">
+                            <span class="btn-shimmer"></span>
+                            立即创作
+                        </button>
+                        <button class="btn-hero-secondary magnetic-btn" onclick="navigateTo('pricing')">查看定价</button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-num" data-count="4">0</span><span class="stat-suffix">K</span>
+                            <span class="stat-label">超清输出</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat">
+                            <span class="stat-num" data-count="3">0</span><span class="stat-suffix">s</span>
+                            <span class="stat-label">极速生成</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat">
+                            <span class="stat-num">&#8734;</span>
+                            <span class="stat-label">创意无限</span>
+                        </div>
+                    </div>
+                </div>
+<div class="hero-gallery parallax-layer parallax-medium">
+  <div class="gallery-stack">
+    <div class="gallery-card gc-1 card-tilt">
+      <div class="gc-inner">
+        <img src="/static/showcase/showcase_01.png" alt="梦幻人像" loading="lazy">
+        <div class="gc-pattern"></div>
+        <div class="gc-shine"></div>
+        <div class="gc-label">梦幻人像</div>
+      </div>
+    </div>
+    <div class="gallery-card gc-2 card-tilt">
+      <div class="gc-inner">
+        <img src="/static/showcase/showcase_06.png" alt="赛博朋克" loading="lazy">
+        <div class="gc-pattern"></div>
+        <div class="gc-shine"></div>
+        <div class="gc-label">赛博朋克</div>
+      </div>
+    </div>
+    <div class="gallery-card gc-3 card-tilt">
+      <div class="gc-inner">
+        <img src="/static/showcase/showcase_07.png" alt="水彩风景" loading="lazy">
+        <div class="gc-pattern"></div>
+        <div class="gc-shine"></div>
+        <div class="gc-label">水彩风景</div>
+      </div>
+    </div>
+    <div class="gallery-card gc-4 card-tilt">
+      <div class="gc-inner">
+        <img src="/static/showcase/showcase_09.png" alt="国潮插画" loading="lazy">
+        <div class="gc-pattern"></div>
+        <div class="gc-shine"></div>
+        <div class="gc-label">国潮插画</div>
+      </div>
+    </div>
+  </div>
+  <div class="gallery-float gf-1 parallax-layer parallax-slow float-animation" style="background-image: url('/static/showcase/showcase_03.png');"></div>
+  <div class="gallery-float gf-2 parallax-layer parallax-fast float-animation" style="background-image: url('/static/showcase/showcase_05.png'); animation-delay: -2s;"></div>
+  <div class="gallery-float gf-3 parallax-layer parallax-medium float-animation" style="background-image: url('/static/showcase/showcase_11.png'); animation-delay: -4s;"></div>
+</div>
+            </section>
+
+            <div class="section-divider"></div>
+
+            <section class="features" data-module="features">
+                <div class="section-header">
+                    <span class="section-tag">为什么选择 ArtForge</span>
+                    <h2 class="section-title">每一个创意都值得被看见</h2>
+                </div>
+                <div class="features-grid stagger-children">
+                    <div class="feature-card card-tilt" data-delay="0">
+                        <div class="feature-icon" style="--fc: #6366f1;">&#9670;</div>
+                        <h3>GPT Image 2</h3>
+                        <p>基于最新图像生成模型，支持文字渲染、精准构图和超写实输出</p>
+                    </div>
+                    <div class="feature-card card-tilt" data-delay="100">
+                        <div class="feature-icon" style="--fc: #ec4899;">&#9733;</div>
+                        <h3>多档画质</h3>
+                        <p>标准·高清·超清·大师，从日常创作到专业交付，按需选择</p>
+                    </div>
+                    <div class="feature-card card-tilt" data-delay="200">
+                        <div class="feature-icon" style="--fc: #f59e0b;">&#9670;</div>
+                        <h3>积分灵活</h3>
+                        <p>用多少扣多少，失败自动退还，不浪费每一分投入</p>
+                    </div>
+                    <div class="feature-card card-tilt" data-delay="300">
+                        <div class="feature-icon" style="--fc: #22c55e;">&#10084;</div>
+                        <h3>授权码体系</h3>
+                        <p>安全可靠的授权码激活机制，保护你的创作权益</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="section-divider"></div>
+
+            <section class="showcase" data-module="showcase">
+                <div class="section-header">
+                    <span class="section-tag">作品展示</span>
+                    <h2 class="section-title">灵感，触手可及</h2>
+                    <p class="section-desc">每一张都由 GPT Image 2 实时生成 · 多场景 · 多风格 · 中文友好</p>
+                </div>
+                <div class="showcase-grid">
+                    <div class="showcase-item showcase-portrait lazy-load" data-category="人像摄影">
+                        <img src="/static/showcase/showcase_01.png" alt="樱花少女" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">人像摄影</span>
+                            <h3 class="showcase-title">樱花少女</h3>
+                            <p class="showcase-prompt">白裙少女·樱花树下·电影级色调</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="电商主图">
+                        <img src="/static/showcase/showcase_02.png" alt="香氛之境" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">电商主图</span>
+                            <h3 class="showcase-title">香氛之境</h3>
+                            <p class="showcase-prompt">极简产品·白色大理石·商业级</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="萌宠日常">
+                        <img src="/static/showcase/showcase_03.png" alt="午后暖阳" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">萌宠日常</span>
+                            <h3 class="showcase-title">午后暖阳</h3>
+                            <p class="showcase-prompt">橘猫窗台·暖光·治愈系</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="美食探店">
+                        <img src="/static/showcase/showcase_05.png" alt="抹茶时光" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">美食探店</span>
+                            <h3 class="showcase-title">抹茶时光</h3>
+                            <p class="showcase-prompt">抹茶拿铁·侘寂风·日式美学</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-landscape lazy-load" data-category="概念艺术">
+                        <img src="/static/showcase/showcase_06.png" alt="霓虹未来" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">概念艺术</span>
+                            <h3 class="showcase-title">霓虹未来</h3>
+                            <p class="showcase-prompt">赛博朋克·霓虹灯·科幻城市</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-landscape-sm lazy-load" data-category="水彩风景">
+                        <img src="/static/showcase/showcase_07.png" alt="江南水乡" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">水彩风景</span>
+                            <h3 class="showcase-title">江南水乡</h3>
+                            <p class="showcase-prompt">小桥流水·晨雾·传统建筑</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="生活方式">
+                        <img src="/static/showcase/showcase_08.png" alt="灵感工位" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">生活方式</span>
+                            <h3 class="showcase-title">灵感工位</h3>
+                            <p class="showcase-prompt">创意桌面·咖啡·绿植</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-tall lazy-load" data-category="穿搭分享">
+                        <img src="/static/showcase/showcase_09.png" alt="竹林汉服" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">穿搭分享</span>
+                            <h3 class="showcase-title">竹林汉服</h3>
+                            <p class="showcase-prompt">汉服少女·竹林·仙气飘飘</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-landscape-sm lazy-load" data-category="家居美学">
+                        <img src="/static/showcase/showcase_10.png" alt="梦幻小屋" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">家居美学</span>
+                            <h3 class="showcase-title">梦幻小屋</h3>
+                            <p class="showcase-prompt">北欧风·暖光·极简生活</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="微距摄影">
+                        <img src="/static/showcase/showcase_11.png" alt="蝶恋花" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">微距摄影</span>
+                            <h3 class="showcase-title">蝶恋花</h3>
+                            <p class="showcase-prompt">蝴蝶微距·浅景深·自然之美</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-landscape lazy-load" data-category="旅行日记">
+                        <img src="/static/showcase/showcase_12.png" alt="圣托里尼" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">旅行日记</span>
+                            <h3 class="showcase-title">圣托里尼</h3>
+                            <p class="showcase-prompt">蓝顶教堂·日落·地中海</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="美妆种草">
+                        <img src="/static/showcase/showcase_13.png" alt="肌肤之钥" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">美妆种草</span>
+                            <h3 class="showcase-title">肌肤之钥</h3>
+                            <p class="showcase-prompt">韩系美妆·粉色大理石·高级感</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="概念艺术">
+                        <img src="/static/showcase/showcase_14.png" alt="蒸汽蝴蝶" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">概念艺术</span>
+                            <h3 class="showcase-title">蒸汽蝴蝶</h3>
+                            <p class="showcase-prompt">蒸汽朋克·齿轮·黄铜质感</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="健康饮食">
+                        <img src="/static/showcase/showcase_15.png" alt="活力早餐" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">健康饮食</span>
+                            <h3 class="showcase-title">活力早餐</h3>
+                            <p class="showcase-prompt">莓果碗·燕麦·健康生活</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-portrait lazy-load" data-category="建筑美学">
+                        <img src="/static/showcase/showcase_16.png" alt="极简之境" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">建筑美学</span>
+                            <h3 class="showcase-title">极简之境</h3>
+                            <p class="showcase-prompt">白色建筑·几何线条·当代设计</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-portrait lazy-load" data-category="梦幻插画">
+                        <img src="/static/showcase/showcase_17.png" alt="星夜童话" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">梦幻插画</span>
+                            <h3 class="showcase-title">星夜童话</h3>
+                            <p class="showcase-prompt">星空少女·云朵·梦幻插画</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-portrait lazy-load" data-category="阅读时光">
+                        <img src="/static/showcase/showcase_19.png" alt="书海拾光" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">阅读时光</span>
+                            <h3 class="showcase-title">书海拾光</h3>
+                            <p class="showcase-prompt">书架·暖灯·阅读角落</p>
+                        </div>
+                    </div>
+                    <div class="showcase-item showcase-square lazy-load" data-category="抽象艺术">
+                        <img src="/static/showcase/showcase_20.png" alt="流金岁月" loading="lazy">
+                        <div class="showcase-overlay">
+                            <span class="showcase-tag">抽象艺术</span>
+                            <h3 class="showcase-title">流金岁月</h3>
+                            <p class="showcase-prompt">流体艺术·金色·大理石纹理</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="showcase-cta">
+                    <p class="showcase-cta-text">以上所有作品均由 AI 实时生成</p>
+                    <button class="btn-hero-primary" onclick="navigateTo('studio')">
+                        <span class="btn-shimmer"></span>
+                        试试你的创意
+                    </button>
+                </div>
+            </section>
+
+            <div class="section-divider"></div>
+
+            <section class="cta-section" data-module="cta">
+                <div class="cta-inner">
+                    <div class="cta-particles"></div>
+                    <h2>准备好释放你的创造力了吗？</h2>
+                    <p>从3积分的免费体验开始，让AI成为你的画笔</p>
+                    <div class="cta-actions">
+                        <button class="btn-hero-primary" onclick="navigateTo('studio')">
+                            <span class="btn-shimmer"></span>
+                            开始创作
+                        </button>
+                        <button class="btn-hero-secondary" onclick="navigateTo('pricing')">了解定价</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="page page-pricing" id="page-pricing">
+            <section class="pricing-hero" data-module="pricing-hero">
+                <div class="section-header">
+                    <span class="section-tag">定价方案</span>
+                    <h2 class="section-title">简单透明，用多少付多少</h2>
+                    <p class="section-desc">积分计费，不浪费每一分投入。生成失败自动退还积分。</p>
+                </div>
+            </section>
+
+            <section class="quality-tiers" data-module="quality-tiers">
+                <h3 class="tier-heading">画质与积分消耗</h3>
+                <div class="tiers-grid stagger-children">
+                    <div class="tier-card">
+                        <div class="tier-icon">&#9733;</div>
+                        <div class="tier-name">标准</div>
+                        <div class="tier-cost"><span class="cost-num">1</span> 积分/张</div>
+                        <div class="tier-detail">GPT Image 2 · 标准画质</div>
+                        <div class="tier-resolution">适合日常创作和快速预览</div>
+                    </div>
+                    <div class="tier-card popular">
+                        <div class="tier-badge">推荐</div>
+                        <div class="tier-icon">&#9733;</div>
+                        <div class="tier-name">高清</div>
+                        <div class="tier-cost"><span class="cost-num">3</span> 积分/张</div>
+                        <div class="tier-detail">GPT Image 2 · 高清画质</div>
+                        <div class="tier-resolution">适合社交媒体和展示</div>
+                    </div>
+                    <div class="tier-card">
+                        <div class="tier-icon">&#9670;</div>
+                        <div class="tier-name">超清</div>
+                        <div class="tier-cost"><span class="cost-num">10</span> 积分/张</div>
+                        <div class="tier-detail">GPT Image 2 · 超清画质</div>
+                        <div class="tier-resolution">适合打印和专业交付</div>
+                    </div>
+                    <div class="tier-card coming-soon">
+                        <div class="tier-badge">即将推出</div>
+                        <div class="tier-icon">&#9670;</div>
+                        <div class="tier-name">大师</div>
+                        <div class="tier-cost"><span class="cost-num">6</span> 积分/张</div>
+                        <div class="tier-detail">Gemini · 大师级画质</div>
+                        <div class="tier-resolution">顶级AI模型，极致创意表达</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="credit-packages" data-module="credit-packages">
+                <h3 class="tier-heading">积分套餐</h3>
+                <div class="packages-grid stagger-children" id="packagesGrid">
+                    <div class="pkg-card" data-pkg="体验卡">
+                        <div class="pkg-header">
+                            <div class="pkg-name">体验卡</div>
+                            <div class="pkg-credits">30 积分</div>
+                        </div>
+                        <div class="pkg-price">
+                            <span class="price-symbol">&yen;</span>
+                            <span class="price-amount">9.9</span>
+                        </div>
+                        <div class="price-per">&yen;0.33/积分</div>
+                        <ul class="pkg-features">
+                            <li>30积分，约30张标准图</li>
+                            <li>30天有效期</li>
+                            <li>全画质可用</li>
+                            <li>适合初次体验</li>
+                        </ul>
+                        <div class="pkg-hint">联系管理员获取授权码</div>
+                    </div>
+                    <div class="pkg-card" data-pkg="基础卡">
+                        <div class="pkg-header">
+                            <div class="pkg-name">基础卡</div>
+                            <div class="pkg-credits">100 积分</div>
+                        </div>
+                        <div class="pkg-price">
+                            <span class="price-symbol">&yen;</span>
+                            <span class="price-amount">29</span>
+                        </div>
+                        <div class="price-per">&yen;0.29/积分</div>
+                        <ul class="pkg-features">
+                            <li>100积分，约100张标准图</li>
+                            <li>90天有效期</li>
+                            <li>全画质可用</li>
+                            <li>适合日常使用</li>
+                        </ul>
+                        <div class="pkg-hint">联系管理员获取授权码</div>
+                    </div>
+                    <div class="pkg-card popular" data-pkg="进阶卡">
+                        <div class="tier-badge">最受欢迎</div>
+                        <div class="pkg-header">
+                            <div class="pkg-name">进阶卡</div>
+                            <div class="pkg-credits">300 积分</div>
+                        </div>
+                        <div class="pkg-price">
+                            <span class="price-symbol">&yen;</span>
+                            <span class="price-amount">79</span>
+                        </div>
+                        <div class="price-per">&yen;0.26/积分</div>
+                        <ul class="pkg-features">
+                            <li>300积分，约300张标准图</li>
+                            <li>180天有效期</li>
+                            <li>全画质可用</li>
+                            <li>适合创作爱好者</li>
+                        </ul>
+                        <div class="pkg-hint">联系管理员获取授权码</div>
+                    </div>
+                    <div class="pkg-card" data-pkg="专业卡">
+                        <div class="pkg-header">
+                            <div class="pkg-name">专业卡</div>
+                            <div class="pkg-credits">800 积分</div>
+                        </div>
+                        <div class="pkg-price">
+                            <span class="price-symbol">&yen;</span>
+                            <span class="price-amount">179</span>
+                        </div>
+                        <div class="price-per">&yen;0.22/积分</div>
+                        <ul class="pkg-features">
+                            <li>800积分，约800张标准图</li>
+                            <li>365天有效期</li>
+                            <li>全画质可用</li>
+                            <li>适合专业创作者</li>
+                        </ul>
+                        <div class="pkg-hint">联系管理员获取授权码</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="faq">
+                <h3 class="tier-heading">常见问题</h3>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-q" onclick="toggleFaq(this)">积分会过期吗？</div>
+                        <div class="faq-a">不同套餐有不同有效期，体验卡30天，基础卡90天，进阶卡180天，专业卡365天。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-q" onclick="toggleFaq(this)">生成失败会扣积分吗？</div>
+                        <div class="faq-a">不会。生成失败或超时会自动退还积分，不浪费每一分投入。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-q" onclick="toggleFaq(this)">如何获取授权码？</div>
+                        <div class="faq-a">联系管理员购买授权码，输入后即可激活账号并获得对应积分。</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-q" onclick="toggleFaq(this)">支持哪些图片比例？</div>
+                        <div class="faq-a">支持1:1方图、3:4竖图、9:16长图、4:3横图、16:9宽图，完美适配小红书、短视频等平台。</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="page page-studio" id="page-studio">
+            <div class="studio-layout">
+                <div class="studio-sidebar">
+                    <div class="studio-form">
+                        <div class="form-section">
+                            <label class="form-label">创意描述</label>
+                            <textarea id="promptInput" rows="4" placeholder="描述你想要的画面..."></textarea>
+                        </div>
+                        <div class="form-section">
+                            <label class="form-label">反向提示词 <span class="optional">可选</span></label>
+                            <textarea id="negativePrompt" rows="2" placeholder="不希望出现的内容..."></textarea>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-section">
+                                <label class="form-label">画质</label>
+                                <select id="qualitySelect">
+                                    <option value="standard">&#9733; 标准 (1积分)</option>
+                                    <option value="hd" selected>&#9733; 高清 (3积分)</option>
+                                    <option value="ultra">&#9670; 超清 (10积分)</option>
+                                </select>
+                            </div>
+                            <div class="form-section">
+                                <label class="form-label">比例</label>
+                                <select id="ratioSelect">
+                                    <option value="square">1:1 方图 · 小红书封面</option>
+                                    <option value="portrait_34">3:4 竖图 · 小红书笔记</option>
+                                    <option value="portrait_916">9:16 长图 · 短视频封面</option>
+                                    <option value="landscape_43">4:3 横图 · PPT配图</option>
+                                    <option value="landscape_169">16:9 宽图 · 电商主图</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-section">
+                                <label class="form-label">风格 <span class="optional">可选</span></label>
+                                <select id="styleSelect">
+                                    <option value="">无风格</option>
+                                </select>
+                            </div>
+                            <div class="form-section">
+                                <label class="form-label">种子</label>
+                                <input type="number" id="seed" value="-1" placeholder="-1 随机">
+                            </div>
+                        </div>
+                        <button class="btn-generate" id="generateBtn" onclick="submitGenerate()">
+                            <span class="gen-icon">&#9670;</span>
+                            开始创作
+                            <span class="gen-cost" id="genCost">-3积分</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="studio-main">
+                    <div class="studio-empty" id="studioEmpty">
+                        <div class="empty-visual">
+                            <div class="empty-orb"></div>
+                            <div class="empty-ring"></div>
+                            <div class="empty-text">等待你的第一幅作品</div>
+                        </div>
+                        <p class="empty-hint">在左侧输入创意描述，点击「开始创作」</p>
+                    </div>
+                    <div class="studio-result" id="studioResult" style="display:none;">
+                        <div class="result-image-wrap">
+                            <img id="resultImg" src="" alt="生成结果">
+                            <div class="result-actions">
+                                <button class="result-btn" onclick="downloadResult()" title="下载">&#8681;</button>
+                                <button class="result-btn" onclick="submitGenerate()" title="重新生成">&#8635;</button>
+                            </div>
+                        </div>
+                        <div class="result-meta" id="resultMeta"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page page-gallery" id="page-gallery">
+            <section class="gallery-header">
+                <div class="section-header">
+                    <span class="section-tag">我的画廊</span>
+                    <h2 class="section-title">创作记录</h2>
+                </div>
+                <div class="gallery-filters">
+                    <button class="filter-btn active" onclick="filterWorks('all', this)">全部</button>
+                    <button class="filter-btn" onclick="filterWorks('favorite', this)">收藏</button>
+                </div>
+            </section>
+            <div class="gallery-grid" id="galleryGrid"></div>
+            <div id="gallerySentinel" style="height:1px;"></div>
+            <div class="pagination" id="galleryPagination"></div>
+        </div>
+
+        <div class="page page-credits" id="page-credits">
+            <section class="credits-header">
+                <div class="section-header">
+                    <span class="section-tag">消费记录</span>
+                    <h2 class="section-title">积分明细</h2>
+                </div>
+            </section>
+            <div class="credits-summary" id="creditsSummary">
+                <div class="cs-card">
+                    <div class="cs-label">当前积分</div>
+                    <div class="cs-value" id="csCurrent">0</div>
+                </div>
+                <div class="cs-card">
+                    <div class="cs-label">累计充值</div>
+                    <div class="cs-value" id="csPurchased">0</div>
+                </div>
+                <div class="cs-card">
+                    <div class="cs-label">累计消费</div>
+                    <div class="cs-value" id="csUsed">0</div>
+                </div>
+                <div class="cs-card">
+                    <div class="cs-label">生成图片</div>
+                    <div class="cs-value" id="csGenerated">0</div>
+                </div>
+            </div>
+            <div class="credits-quality-stats" id="creditsQualityStats"></div>
+            <div class="credits-filters">
+                <button class="filter-btn active" onclick="filterCredits('', this)">全部</button>
+                <button class="filter-btn" onclick="filterCredits('consume', this)">消费</button>
+                <button class="filter-btn" onclick="filterCredits('purchase', this)">充值</button>
+                <button class="filter-btn" onclick="filterCredits('refund', this)">退还</button>
+            </div>
+            <div class="credits-card-grid" id="creditsCardGrid"></div>
+            <div id="creditsSentinel" style="height:1px;"></div>
+            <div class="pagination" id="creditsPagination"></div>
+        </div>
+
+        <div class="page page-login" id="page-login">
+            <div class="login-container">
+                <div class="login-visual">
+                    <canvas id="loginParticleCanvas"></canvas>
+                    <div class="lv-orb lv-orb-1"></div>
+                    <div class="lv-orb lv-orb-2"></div>
+                    <div class="lv-orb lv-orb-3"></div>
+                    <div class="lv-text">
+                        <h2>欢迎回来</h2>
+                        <p>输入授权码，开启你的创作之旅</p>
+                    </div>
+                </div>
+                <div class="login-form-area">
+                    <form id="activateForm" onsubmit="handleActivate(event)">
+                        <div class="login-logo">&#9670;</div>
+                        <div class="login-title">激活授权码</div>
+                        <div class="input-group">
+                            <input type="text" id="authCode" placeholder="请输入32位授权码" maxlength="32" required autocomplete="off">
+                            <div class="input-line"></div>
+                        </div>
+                        <button type="submit" class="btn-login">
+                            <span class="btn-shimmer"></span>
+                            激活 / 登录
+                        </button>
+                        <p class="login-hint">首次输入授权码将自动激活账号</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="waiting-overlay" id="waitingOverlay" style="display:none;">
+            <div class="waiting-backdrop"></div>
+            <div class="waiting-content">
+                <div class="waiting-canvas">
+                    <div class="paint-blob blob-1"></div>
+                    <div class="paint-blob blob-2"></div>
+                    <div class="paint-blob blob-3"></div>
+                    <div class="paint-blob blob-4"></div>
+                    <div class="paint-blob blob-5"></div>
+                    <div class="waiting-icon">
+                        <svg class="brush-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 56L12 52C14 50 16 50 18 52L20 54C22 56 24 56 26 54L30 50C32 48 34 48 36 50L40 54C42 56 44 55 45 53L48 46C49 44 51 43 53 44L56 46" stroke="url(#brushGrad)" stroke-width="3" stroke-linecap="round" fill="none">
+                                <animate attributeName="stroke-dasharray" values="0,200;100,200;0,200" dur="3s" repeatCount="indefinite"/>
+                            </path>
+                            <circle cx="10" cy="54" r="4" fill="url(#brushGrad)" opacity="0.8">
+                                <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <defs>
+                                <linearGradient id="brushGrad" x1="0" y1="0" x2="64" y2="64">
+                                    <stop offset="0%" stop-color="#6366f1"/>
+                                    <stop offset="50%" stop-color="#a855f7"/>
+                                    <stop offset="100%" stop-color="#ec4899"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+                <div class="waiting-stages">
+                    <div class="stage" id="stage-0"><div class="stage-dot"></div><span>排队中</span></div>
+                    <div class="stage-line"><div class="stage-line-fill" id="stageLine0"></div></div>
+                    <div class="stage" id="stage-1"><div class="stage-dot"></div><span>构思中</span></div>
+                    <div class="stage-line"><div class="stage-line-fill" id="stageLine1"></div></div>
+                    <div class="stage" id="stage-2"><div class="stage-dot"></div><span>绘制中</span></div>
+                    <div class="stage-line"><div class="stage-line-fill" id="stageLine2"></div></div>
+                    <div class="stage" id="stage-3"><div class="stage-dot"></div><span>渲染中</span></div>
+                </div>
+                <div class="waiting-timer" id="waitingTimer">已等待 0 秒</div>
+                <div class="waiting-tip" id="waitingTip">
+                    <div class="tip-icon">&#128161;</div>
+                    <div class="tip-text" id="tipText">AI正在理解你的创意，请稍候...</div>
+                </div>
+                <div class="waiting-prompt-preview" id="promptPreview"></div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="buyModal" style="display:none;">
+            <div class="modal">
+                <button class="modal-close" onclick="closeBuyModal()">&#10005;</button>
+                <div class="modal-title" id="modalTitle">购买套餐</div>
+                <div class="modal-body" id="modalBody"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-inner">
+                <span class="footer-brand">&#9670; ArtForge AI</span>
+                <span class="footer-copy">&copy; 2025 ArtForge. 创意无限.</span>
+            </div>
+        </footer>
+    </div>
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()" aria-label="回到顶部">
+        <span class="back-to-top-icon">&#9650;</span>
+    </button>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/index.js"></script>
+</body>
+</html>

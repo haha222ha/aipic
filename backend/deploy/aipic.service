@@ -1,0 +1,18 @@
+[Unit]
+Description=AI Image Generation Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/aipic/backend
+EnvironmentFile=/opt/aipic/backend/.env
+ExecStart=/opt/aipic/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8800
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

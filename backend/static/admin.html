@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - AI智能作图</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>管理后台</h1>
+            <button onclick="adminLogout()">退出管理</button>
+        </div>
+
+        <div class="login-box" id="loginBox">
+            <h2>管理员登录</h2>
+            <div id="loginError" class="login-error" style="display:none;"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="用户名" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="密码" required>
+                </div>
+                <button type="submit" class="btn-primary">登录</button>
+            </form>
+        </div>
+
+        <div class="admin-content" id="adminContent" style="display:none;">
+            <div class="tabs">
+                <button class="tab active" data-tab="dashboard">数据看板</button>
+                <button class="tab" data-tab="users">用户管理</button>
+                <button class="tab" data-tab="codes">授权码管理</button>
+                <button class="tab" data-tab="queue">队列管理</button>
+                <button class="tab" data-tab="styles">风格管理</button>
+                <button class="tab" data-tab="config">系统配置</button>
+                <button class="tab" data-tab="logs">操作日志</button>
+            </div>
+
+            <div class="tab-content" id="tab-dashboard">
+                <h3>数据概览</h3>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <div class="tab-content" id="tab-users" style="display:none;">
+                <div class="tab-header">
+                    <h3>用户管理</h3>
+                </div>
+                <table id="userTable">
+                    <thead>
+                        <tr>
+                            <th>用户ID</th>
+                            <th>用户名</th>
+                            <th>套餐</th>
+                            <th>今日/日限额</th>
+                            <th>过期时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="tab-codes" style="display:none;">
+                <div class="tab-header">
+                    <h3>授权码管理</h3>
+                    <div class="tab-actions">
+                        <button class="btn-primary" onclick="showBatchGenerateForm()">批量生成</button>
+                        <button class="btn-secondary" onclick="showExportForm()">批量导出</button>
+                    </div>
+                </div>
+                <div class="create-codes-form" id="batchGenerateForm" style="display:none;">
+                    <h4>批量生成授权码</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>套餐类型</label>
+                            <select id="batchPackageType">
+                                <option value="体验版">体验版</option>
+                                <option value="基础版" selected>基础版</option>
+                                <option value="专业版">专业版</option>
+                                <option value="旗舰版">旗舰版</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>生成数量</label>
+                            <input type="number" id="batchCount" value="50" min="1" max="500">
+                        </div>
+                        <div class="form-group">
+                            <label>有效天数</label>
+                            <input type="number" id="batchValidDays" value="30" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>批次名称</label>
+                            <input type="text" id="batchName" placeholder="如：小红书电商-基础版-5月批次">
+                        </div>
+                        <div class="form-group">
+                            <label>导出标签</label>
+                            <input type="text" id="batchExportTag" placeholder="如：电商A店、渠道B">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-primary" onclick="batchGenerateCodes()">生成</button>
+                        <button class="btn-secondary" onclick="hideBatchGenerateForm()">取消</button>
+                    </div>
+                </div>
+                <div class="export-form" id="exportForm" style="display:none;">
+                    <h4>批量导出授权码</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>按批次筛选</label>
+                            <select id="exportBatchNo">
+                                <option value="">全部批次</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>按套餐筛选</label>
+                            <select id="exportPackageType">
+                                <option value="">全部套餐</option>
+                                <option value="体验版">体验版</option>
+                                <option value="基础版">基础版</option>
+                                <option value="专业版">专业版</option>
+                                <option value="旗舰版">旗舰版</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>按状态筛选</label>
+                            <select id="exportStatus">
+                                <option value="">全部状态</option>
+                                <option value="未激活">未激活</option>
+                                <option value="已激活">已激活</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-primary" onclick="exportCodes()">导出CSV</button>
+                        <button class="btn-secondary" onclick="hideExportForm()">取消</button>
+                    </div>
+                </div>
+                <div class="batch-list" id="batchList">
+                    <h4>批次列表</h4>
+                    <table id="batchTable">
+                        <thead>
+                            <tr>
+                                <th>批次号</th>
+                                <th>批次名称</th>
+                                <th>套餐类型</th>
+                                <th>导出标签</th>
+                                <th>总数</th>
+                                <th>未激活</th>
+                                <th>已激活</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="filter-bar">
+                    <select id="codeStatusFilter" onchange="loadCodes()">
+                        <option value="">全部</option>
+                        <option value="未激活">未激活</option>
+                        <option value="已激活">已激活</option>
+                        <option value="已过期">已过期</option>
+                    </select>
+                </div>
+                <table id="codeTable">
+                    <thead>
+                        <tr>
+                            <th>授权码</th>
+                            <th>套餐</th>
+                            <th>积分</th>
+                            <th>有效天数</th>
+                            <th>批次号</th>
+                            <th>导出标签</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>激活用户</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="tab-queue" style="display:none;">
+                <h3>队列管理</h3>
+                <div class="queue-stats" id="adminQueueStats"></div>
+                <table id="queueTable">
+                    <thead>
+                        <tr>
+                            <th>任务ID</th>
+                            <th>用户</th>
+                            <th>提示词</th>
+                            <th>模型</th>
+                            <th>状态</th>
+                            <th>提交时间</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="tab-styles" style="display:none;">
+                <div class="tab-header">
+                    <h3>风格管理</h3>
+                    <button class="btn-primary" onclick="showAddStyleForm()">添加风格</button>
+                </div>
+                <div class="add-style-form" id="addStyleForm" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>风格名称</label>
+                            <input type="text" id="styleName" placeholder="如：赛博朋克">
+                        </div>
+                        <div class="form-group">
+                            <label>分类</label>
+                            <input type="text" id="styleCategory" value="通用">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>风格提示词</label>
+                        <textarea id="stylePrompt" rows="2" placeholder="英文提示词"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>反向提示词</label>
+                        <textarea id="styleNegPrompt" rows="2" placeholder="英文反向提示词（可选）"></textarea>
+                    </div>
+                    <button class="btn-primary" onclick="addStyle()">添加</button>
+                </div>
+                <table id="styleTable">
+                    <thead>
+                        <tr>
+                            <th>名称</th>
+                            <th>分类</th>
+                            <th>提示词</th>
+                            <th>类型</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="tab-content" id="tab-config" style="display:none;">
+                <h3>系统配置</h3>
+                <div id="configForm"></div>
+            </div>
+
+            <div class="tab-content" id="tab-logs" style="display:none;">
+                <h3>操作日志</h3>
+                <table id="logTable">
+                    <thead>
+                        <tr>
+                            <th>管理员</th>
+                            <th>操作类型</th>
+                            <th>操作内容</th>
+                            <th>时间</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
