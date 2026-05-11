@@ -2,8 +2,8 @@
 set -e
 
 APP_DIR="/opt/aipic"
-REPO_URL=""  # 填写你的 GitHub 仓库地址，如 https://github.com/username/aipic.git
-BRANCH="main"
+REPO_URL="https://github.com/haha222ha/aipic.git"
+BRANCH="master"
 VENV_DIR="$APP_DIR/venv"
 SERVICE_NAME="aipic"
 
