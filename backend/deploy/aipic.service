@@ -12,11 +12,6 @@ ExecStart=/opt/aipic/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8800 --work
 Restart=always
 RestartSec=5
 
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/aipic/backend/outputs /opt/aipic/backend/temp /opt/aipic/backend/user_data /opt/aipic/backend/logs
-
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=aipic
