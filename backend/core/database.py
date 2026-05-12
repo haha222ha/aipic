@@ -319,6 +319,15 @@ def get_next_task_from_queue():
                 LIMIT 1
             ''')
             task = cursor.fetchone()
+            if task:
+                now = datetime.now().isoformat()
+                cursor.execute(
+                    "UPDATE global_generate_queue SET task_status = '执行中', execute_time = ? WHERE task_id = ? AND task_status = '待执行'",
+                    (now, task['task_id'],)
+                )
+                if cursor.rowcount == 0:
+                    return None
+                conn.commit()
             return dict(task) if task else None
 
 

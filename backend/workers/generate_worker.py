@@ -3,14 +3,15 @@ import time
 from datetime import datetime
 
 from core.database import get_next_task_from_queue, update_task_status
-from core.config import WORKER_INTERVAL
+from core.config import WORKER_INTERVAL, WORKER_COUNT
 
-_worker_thread = None
-_worker_running = False
+_workers = []
+_workers_running = False
 
 
 class GenerateWorker:
-    def __init__(self):
+    def __init__(self, worker_id: int):
+        self.worker_id = worker_id
         self.running = False
         self.thread = None
         self.current_task = None
@@ -20,23 +21,21 @@ class GenerateWorker:
         if self.running:
             return
         self.running = True
-        self.thread = threading.Thread(target=self._worker_loop, daemon=True)
+        self.thread = threading.Thread(target=self._worker_loop, daemon=True, name=f"GenWorker-{self.worker_id}")
         self.thread.start()
-        print("生图Worker已启动")
 
     def stop(self):
         self.running = False
-        if self.thread:
-            self.thread.join(timeout=5)
-        print("生图Worker已停止")
 
     def get_status(self):
         return {
+            "worker_id": self.worker_id,
             "running": self.running,
             "current_task": self.current_task,
         }
 
     def _worker_loop(self):
+        print(f"生图Worker-{self.worker_id} 已启动")
         while self.running:
             try:
                 task = get_next_task_from_queue()
@@ -46,7 +45,6 @@ class GenerateWorker:
 
                 self.current_task = task['task_id']
                 self.current_task_info = task
-                update_task_status(task['task_id'], '执行中', execute_time=datetime.now().isoformat())
 
                 result = self._execute_task(task)
 
@@ -71,14 +69,13 @@ class GenerateWorker:
 
                     credits_cost = task.get('credits_cost', 0)
                     if credits_cost > 0:
-                        from core.database import refund_credits
                         self._safe_refund(task['user_id'], credits_cost, f"生成失败退还：{task.get('prompt', '')[:20]}")
 
                 self.current_task = None
                 self.current_task_info = None
 
             except Exception as e:
-                print(f"Worker执行异常: {e}")
+                print(f"Worker-{self.worker_id} 执行异常: {e}")
                 if self.current_task:
                     try:
                         update_task_status(
@@ -95,7 +92,7 @@ class GenerateWorker:
                                     f"生成异常退还：{self.current_task_info.get('prompt', '')[:20]}"
                                 )
                     except Exception as inner_e:
-                        print(f"Worker异常处理失败: {inner_e}")
+                        print(f"Worker-{self.worker_id} 异常处理失败: {inner_e}")
                     self.current_task = None
                     self.current_task_info = None
                 time.sleep(WORKER_INTERVAL)
@@ -138,16 +135,31 @@ class GenerateWorker:
         )
 
 
-_worker_instance = GenerateWorker()
-
-
 def start_generate_worker():
-    _worker_instance.start()
+    global _workers, _workers_running
+    _workers_running = True
+    for i in range(WORKER_COUNT):
+        worker = GenerateWorker(worker_id=i)
+        worker.start()
+        _workers.append(worker)
+    print(f"生图Worker池已启动，共 {WORKER_COUNT} 个Worker")
 
 
 def stop_generate_worker():
-    _worker_instance.stop()
+    global _workers_running
+    _workers_running = False
+    for worker in _workers:
+        worker.stop()
+    for worker in _workers:
+        if worker.thread:
+            worker.thread.join(timeout=5)
+    _workers.clear()
+    print("生图Worker池已停止")
 
 
 def get_worker_status():
-    return _worker_instance.get_status()
+    return {
+        "total_workers": len(_workers),
+        "running": _workers_running,
+        "workers": [w.get_status() for w in _workers],
+    }

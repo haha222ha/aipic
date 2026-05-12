@@ -149,6 +149,9 @@ async def get_stats(request: Request, current_admin: dict = Depends(get_current_
         ''')
         package_dist = {row['package_type']: row['count'] for row in cursor.fetchall()}
 
+    from workers.generate_worker import get_worker_status
+    worker_status = get_worker_status()
+
     return {
         "code": 200,
         "msg": "查询成功",
@@ -159,6 +162,7 @@ async def get_stats(request: Request, current_admin: dict = Depends(get_current_
             "running_tasks": running_tasks,
             "today_completed": today_completed,
             "package_distribution": package_dist,
+            "worker_status": worker_status,
         }
     }
 
