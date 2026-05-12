@@ -74,10 +74,10 @@ def activate_auth_code(auth_code: str):
         cursor.execute('''
             INSERT INTO global_user_info
             (user_id, username, auth_code_hash, package_type, credits, total_credits_purchased, total_credits_used, daily_generate_limit, today_generated_count, last_reset_date, expire_time, status, create_time)
-            VALUES (?, ?, ?, ?, ?, 0, 0, ?, 0, date('now'), ?, '正常', ?)
+            VALUES (?, ?, ?, ?, 0, 0, 0, ?, 0, date('now'), ?, '正常', ?)
         ''', (
             user_id, username, auth_code, code_info['package_type'],
-            initial_credits, pkg['daily_generate_limit'], expire_time, datetime.now().isoformat()
+            pkg['daily_generate_limit'], expire_time, datetime.now().isoformat()
         ))
 
         cursor.execute('''

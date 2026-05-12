@@ -17,9 +17,10 @@ async def activate(request: Request):
     result = activate_auth_code(auth_code)
 
     if result['code'] == 200:
+        is_secure = request.url.scheme == 'https'
         response = JSONResponse(result)
-        response.set_cookie("user_id", result['data']['user_id'], max_age=86400 * 30, httponly=True, samesite="lax", secure=True)
-        response.set_cookie("auth_code", auth_code, max_age=86400 * 30, httponly=True, samesite="lax", secure=True)
+        response.set_cookie("user_id", result['data']['user_id'], max_age=86400 * 30, httponly=True, samesite="lax", secure=is_secure)
+        response.set_cookie("auth_code", auth_code, max_age=86400 * 30, httponly=True, samesite="lax", secure=is_secure)
         return response
 
     return result
@@ -80,8 +81,9 @@ async def admin_login(request: Request):
     log_admin_operation(username, "登录", "管理员登录", _get_client_ip(request))
 
     session_token = _sign_admin_token(username)
+    is_secure = request.url.scheme == 'https'
     response = JSONResponse({"code": 200, "msg": "登录成功", "data": {"username": username}})
-    response.set_cookie("admin_session", session_token, max_age=86400, httponly=True, samesite="lax", secure=True)
+    response.set_cookie("admin_session", session_token, max_age=86400, httponly=True, samesite="lax", secure=is_secure)
     response.delete_cookie("admin_username")
     return response
 

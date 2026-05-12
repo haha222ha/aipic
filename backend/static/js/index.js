@@ -529,12 +529,17 @@ function updateUIForLoggedIn() {
     document.getElementById('creditsNavLink').style.display = 'inline-block';
 
     const credits = currentUserInfo.credits || 0;
-    document.getElementById('creditsCount').textContent = credits;
-    document.getElementById('studioCredits').textContent = credits;
+    const creditsCountEl = document.getElementById('creditsCount');
+    if (creditsCountEl) creditsCountEl.textContent = credits;
+    const studioCreditsEl = document.getElementById('studioCredits');
+    if (studioCreditsEl) studioCreditsEl.textContent = credits;
 
-    const maxCredits = 500;
-    const barWidth = Math.min((credits / maxCredits) * 100, 100);
-    document.getElementById('creditsBar').style.width = barWidth + '%';
+    const creditsBarEl = document.getElementById('creditsBar');
+    if (creditsBarEl) {
+        const maxCredits = 500;
+        const barWidth = Math.min((credits / maxCredits) * 100, 100);
+        creditsBarEl.style.width = barWidth + '%';
+    }
 }
 
 function updateUIForLoggedOut() {
@@ -615,7 +620,7 @@ async function submitGenerate() {
         return;
     }
 
-    const prompt = document.getElementById('prompt').value.trim();
+    const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) { alert('请输入提示词'); return; }
 
     const ratio = document.getElementById('ratioSelect').value;
