@@ -1,7 +1,7 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('path');
 
-const SERVER_URL = 'https://www.xhs365.cn';
+const SERVER_URL = 'https://pic.xhs365.cn';
 
 let mainWindow;
 
@@ -11,7 +11,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'XHS365',
+    title: 'ArtForge AI',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -53,7 +53,7 @@ function createWindow() {
     {
       label: '帮助',
       submenu: [
-        { label: '关于 XHS365', click: () => shell.openExternal(SERVER_URL) },
+        { label: '关于 ArtForge AI', click: () => shell.openExternal(SERVER_URL) },
         { label: '查看定价', click: () => mainWindow.loadURL(SERVER_URL + '/#pricing') },
       ],
     },
