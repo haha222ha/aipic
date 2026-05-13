@@ -9,15 +9,22 @@ from core.config import GLOBAL_DB_PATH, USER_DATA_DIR, PACKAGES
 
 _global_db_lock = threading.RLock()
 
+_global_db_pool = None
+_global_db_pool_lock = threading.Lock()
+
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 
 
 def get_global_db():
-    conn = sqlite3.connect(GLOBAL_DB_PATH, check_same_thread=False, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA wal_autocheckpoint=1000")
-    return conn
+    global _global_db_pool
+    if _global_db_pool is None:
+        with _global_db_pool_lock:
+            if _global_db_pool is None:
+                _global_db_pool = sqlite3.connect(GLOBAL_DB_PATH, check_same_thread=False, timeout=30)
+                _global_db_pool.row_factory = sqlite3.Row
+                _global_db_pool.execute("PRAGMA journal_mode=WAL")
+                _global_db_pool.execute("PRAGMA wal_autocheckpoint=1000")
+    return _global_db_pool
 
 
 @contextmanager
@@ -25,8 +32,9 @@ def global_db_conn():
     conn = get_global_db()
     try:
         yield conn
-    finally:
-        conn.close()
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def init_global_db():
@@ -224,8 +232,37 @@ def init_global_db():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS global_rate_limits (
+            key TEXT PRIMARY KEY,
+            timestamps TEXT NOT NULL DEFAULT '[]'
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS global_user_actions (
+            user_id TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            timestamps TEXT NOT NULL DEFAULT '[]',
+            PRIMARY KEY (user_id, action_type)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS global_user_freeze (
+            user_id TEXT PRIMARY KEY,
+            unfreeze_time REAL NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS global_secrets (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    ''')
+
     conn.commit()
-    conn.close()
 
 
 def get_user_db(user_id: str):
@@ -485,4 +522,134 @@ def log_admin_operation(admin_username: str, op_type: str, op_content: str, op_i
                 INSERT INTO global_operation_log (admin_username, operation_type, operation_content, operation_time, operation_ip)
                 VALUES (?, ?, ?, ?, ?)
             ''', (admin_username, op_type, op_content, datetime.now().isoformat(), op_ip))
+            conn.commit()
+
+
+def get_persistent_secret(key: str, generator=None) -> str:
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM global_secrets WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            if row:
+                return row['value']
+            if generator is None:
+                import secrets as _secrets
+                value = _secrets.token_hex(32)
+            else:
+                value = generator()
+            cursor.execute("INSERT INTO global_secrets (key, value) VALUES (?, ?)", (key, value))
+            conn.commit()
+            return value
+
+
+def rate_limit_get(key: str) -> list:
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT timestamps FROM global_rate_limits WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        if row:
+            import json
+            return json.loads(row['timestamps'])
+        return []
+
+
+def rate_limit_set(key: str, timestamps: list):
+    import json
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO global_rate_limits (key, timestamps) VALUES (?, ?)",
+                (key, json.dumps(timestamps))
+            )
+            conn.commit()
+
+
+def rate_limit_cleanup_expired(expired_keys: list):
+    if not expired_keys:
+        return
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            for key in expired_keys:
+                cursor.execute("DELETE FROM global_rate_limits WHERE key = ?", (key,))
+            conn.commit()
+
+
+def user_action_get(user_id: str, action_type: str) -> list:
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT timestamps FROM global_user_actions WHERE user_id = ? AND action_type = ?",
+            (user_id, action_type)
+        )
+        row = cursor.fetchone()
+        if row:
+            import json
+            return json.loads(row['timestamps'])
+        return []
+
+
+def user_action_set(user_id: str, action_type: str, timestamps: list):
+    import json
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO global_user_actions (user_id, action_type, timestamps) VALUES (?, ?, ?)",
+                (user_id, action_type, json.dumps(timestamps))
+            )
+            conn.commit()
+
+
+def user_freeze_get(user_id: str) -> float:
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT unfreeze_time FROM global_user_freeze WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        return row['unfreeze_time'] if row else 0.0
+
+
+def user_freeze_set(user_id: str, unfreeze_time: float):
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO global_user_freeze (user_id, unfreeze_time) VALUES (?, ?)",
+                (user_id, unfreeze_time)
+            )
+            conn.commit()
+
+
+def user_freeze_delete(user_id: str):
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM global_user_freeze WHERE user_id = ?", (user_id,))
+            conn.commit()
+
+
+def user_freeze_cleanup_expired(expired_user_ids: list):
+    if not expired_user_ids:
+        return
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            for uid in expired_user_ids:
+                cursor.execute("DELETE FROM global_user_freeze WHERE user_id = ?", (uid,))
+            conn.commit()
+
+
+def user_action_cleanup_expired(expired_entries: list):
+    if not expired_entries:
+        return
+    with _global_db_lock:
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            for uid, action_type in expired_entries:
+                cursor.execute(
+                    "DELETE FROM global_user_actions WHERE user_id = ? AND action_type = ?",
+                    (uid, action_type)
+                )
             conn.commit()

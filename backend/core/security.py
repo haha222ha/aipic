@@ -15,24 +15,65 @@ from core.config import (
     CONTENT_FILTER_ENABLED, CONTENT_FILTER_KEYWORDS,
 )
 from core.auth import verify_user
+from core.database import (
+    get_persistent_secret, rate_limit_get, rate_limit_set, rate_limit_cleanup_expired,
+    user_action_get, user_action_set, user_freeze_get, user_freeze_set,
+    user_freeze_delete, user_freeze_cleanup_expired, user_action_cleanup_expired,
+    global_db_conn,
+)
 
-_ADMIN_SESSION_SECRET = os.environ.get("ADMIN_SESSION_SECRET") or secrets.token_hex(32)
+_ADMIN_SESSION_SECRET = os.environ.get("ADMIN_SESSION_SECRET") or ""
 _admin_sessions: dict = {}
 
 
+def _ensure_admin_secret():
+    global _ADMIN_SESSION_SECRET
+    if not _ADMIN_SESSION_SECRET:
+        _ADMIN_SESSION_SECRET = get_persistent_secret("admin_session_secret")
+
+
 def _sign_admin_token(username: str) -> str:
+    _ensure_admin_secret()
     raw = f"{username}:{_ADMIN_SESSION_SECRET}"
     sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
     return f"{username}:{sig}"
 
 
 def _verify_admin_token(token: str) -> Optional[str]:
+    _ensure_admin_secret()
     try:
         username, sig = token.rsplit(':', 1)
         raw = f"{username}:{_ADMIN_SESSION_SECRET}"
         expected_sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
         if hmac.compare_digest(sig, expected_sig):
             return username
+    except (ValueError, AttributeError):
+        pass
+    return None
+
+
+def _generate_session_token(user_id: str, auth_code: str) -> str:
+    _ensure_admin_secret()
+    raw = f"user:{user_id}:{auth_code}"
+    sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{user_id}:{sig}"
+
+
+def _verify_session_token(token: str) -> Optional[str]:
+    _ensure_admin_secret()
+    try:
+        user_id, sig = token.rsplit(':', 1)
+        with global_db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT auth_code_hash FROM global_user_info WHERE user_id = ? AND status = '正常'", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            auth_code = row['auth_code_hash']
+            raw = f"user:{user_id}:{auth_code}"
+            expected_sig = hmac.new(_ADMIN_SESSION_SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()[:32]
+            if hmac.compare_digest(sig, expected_sig):
+                return user_id
     except (ValueError, AttributeError):
         pass
     return None
@@ -66,9 +107,6 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request else "unknown"
 
 
-_rate_limit_store: dict = {}
-
-
 def rate_limit(limit: int = RATE_LIMIT_REQUESTS, time_window: int = RATE_LIMIT_WINDOW):
     def decorator(func):
         @wraps(func)
@@ -77,56 +115,47 @@ def rate_limit(limit: int = RATE_LIMIT_REQUESTS, time_window: int = RATE_LIMIT_W
             key = f"{func.__name__}:{client_ip}"
             now = time.time()
 
-            if key not in _rate_limit_store:
-                _rate_limit_store[key] = []
+            timestamps = rate_limit_get(key)
+            timestamps = [t for t in timestamps if now - t < time_window]
 
-            _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < time_window]
-
-            if len(_rate_limit_store[key]) >= limit:
+            if len(timestamps) >= limit:
                 return JSONResponse(
                     status_code=429,
                     content={"code": 429, "msg": "请求过于频繁，请稍后再试", "data": None}
                 )
 
-            _rate_limit_store[key].append(now)
+            timestamps.append(now)
+            rate_limit_set(key, timestamps)
             return await func(request, *args, **kwargs)
         return wrapper
     return decorator
 
 
-_user_action_store: dict = {}
-_user_freeze_store: dict = {}
-
-
 def check_user_action_limit(user_id: str, action_type: str = 'generate') -> tuple:
     now = time.time()
 
-    if user_id in _user_freeze_store:
-        if now < _user_freeze_store[user_id]:
-            remaining = int(_user_freeze_store[user_id] - now)
+    unfreeze_time = user_freeze_get(user_id)
+    if unfreeze_time > 0:
+        if now < unfreeze_time:
+            remaining = int(unfreeze_time - now)
             return False, f"操作过于频繁，请{remaining}秒后再试"
         else:
-            del _user_freeze_store[user_id]
+            user_freeze_delete(user_id)
 
-    if user_id not in _user_action_store:
-        _user_action_store[user_id] = {}
-
-    if action_type not in _user_action_store[user_id]:
-        _user_action_store[user_id][action_type] = []
+    timestamps = user_action_get(user_id, action_type)
 
     cutoff = now - USER_ACTION_WINDOW
-    _user_action_store[user_id][action_type] = [
-        t for t in _user_action_store[user_id][action_type] if t > cutoff
-    ]
+    timestamps = [t for t in timestamps if t > cutoff]
 
-    recent_count = len(_user_action_store[user_id][action_type])
+    recent_count = len(timestamps)
 
     if recent_count >= USER_ACTION_LIMIT:
-        _user_freeze_store[user_id] = now + USER_FREEZE_DURATION
-        _user_action_store[user_id][action_type] = []
+        user_freeze_set(user_id, now + USER_FREEZE_DURATION)
+        user_action_set(user_id, action_type, [])
         return False, "操作过于频繁，系统已临时限制5分钟"
 
-    _user_action_store[user_id][action_type].append(now)
+    timestamps.append(now)
+    user_action_set(user_id, action_type, timestamps)
     return True, ""
 
 
@@ -134,44 +163,48 @@ def cleanup_user_action_store():
     now = time.time()
     cutoff = now - USER_FREEZE_DURATION
 
-    expired_users = [
-        uid for uid, actions in _user_action_store.items()
-        if not any(t > cutoff for t in actions.get('generate', []))
-    ]
-    for uid in expired_users:
-        del _user_action_store[uid]
+    expired_rate_limits = []
+    all_rate_keys = []
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, timestamps FROM global_rate_limits")
+        for row in cursor.fetchall():
+            import json
+            timestamps = json.loads(row['timestamps'])
+            if not any(now - t < RATE_LIMIT_WINDOW for t in timestamps):
+                expired_rate_limits.append(row['key'])
+    rate_limit_cleanup_expired(expired_rate_limits)
 
-    expired_frozen = [
-        uid for uid, until in _user_freeze_store.items()
-        if now >= until
-    ]
-    for uid in expired_frozen:
-        del _user_freeze_store[uid]
+    expired_freeze = []
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, unfreeze_time FROM global_user_freeze")
+        for row in cursor.fetchall():
+            if now >= row['unfreeze_time']:
+                expired_freeze.append(row['user_id'])
+    user_freeze_cleanup_expired(expired_freeze)
 
-    expired_rate_limits = [
-        key for key, timestamps in _rate_limit_store.items()
-        if not any(now - t < RATE_LIMIT_WINDOW for t in timestamps)
-    ]
-    for key in expired_rate_limits:
-        del _rate_limit_store[key]
-
-
-def _cleanup_expired_rate_limits():
-    now = time.time()
-    expired_keys = [
-        key for key, timestamps in _rate_limit_store.items()
-        if not any(now - t < RATE_LIMIT_WINDOW for t in timestamps)
-    ]
-    for key in expired_keys:
-        del _rate_limit_store[key]
+    expired_actions = []
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, action_type, timestamps FROM global_user_actions")
+        for row in cursor.fetchall():
+            import json
+            timestamps = json.loads(row['timestamps'])
+            if not any(t > cutoff for t in timestamps):
+                expired_actions.append((row['user_id'], row['action_type']))
+    user_action_cleanup_expired(expired_actions)
 
 
 def get_user_from_cookie(request: Request) -> Optional[dict]:
     user_id = request.cookies.get("user_id")
-    auth_code = request.cookies.get("auth_code")
-    if not user_id or not auth_code:
+    session_token = request.cookies.get("session")
+    if not user_id or not session_token:
         return None
-    return verify_user(user_id, auth_code)
+    verified_user_id = _verify_session_token(session_token)
+    if not verified_user_id or verified_user_id != user_id:
+        return None
+    return verify_user_by_id(user_id)
 
 
 async def get_current_user(request: Request) -> dict:

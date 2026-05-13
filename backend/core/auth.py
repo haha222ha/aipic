@@ -116,29 +116,49 @@ def verify_user(user_id: str, auth_code: str) -> Optional[dict]:
         if not user:
             return None
         user = dict(user)
-        expire_time = _parse_datetime(user['expire_time'])
-        if datetime.now() > expire_time:
-            cursor.execute("UPDATE global_user_info SET status = '冻结' WHERE user_id = ?", (user_id,))
-            conn.commit()
+        return _check_user_status(user, conn)
+
+
+def verify_user_by_id(user_id: str) -> Optional[dict]:
+    with global_db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM global_user_info
+            WHERE user_id = ? AND status = '正常'
+        ''', (user_id,))
+        user = cursor.fetchone()
+        if not user:
             return None
+        user = dict(user)
+        return _check_user_status(user, conn)
 
-        if user.get('package_type') == '免费版':
-            today = datetime.now().strftime('%Y-%m-%d')
-            if user.get('last_reset_date') != today:
-                free_credits = PACKAGES['免费版'].get('free_credits', 3)
-                old_credits = user.get('credits', 0)
-                cursor.execute(
-                    "UPDATE global_user_info SET credits = ?, today_generated_count = 0, last_reset_date = ? WHERE user_id = ?",
-                    (free_credits, today, user_id)
-                )
-                cursor.execute('''
-                    INSERT INTO global_credits_log (user_id, change_amount, change_type, description, balance_after, create_time)
-                    VALUES (?, ?, 'daily_reset', '免费版每日积分重置', ?, ?)
-                ''', (user_id, free_credits - old_credits, free_credits, datetime.now().isoformat()))
-                user['credits'] = free_credits
-                conn.commit()
 
-        return user
+def _check_user_status(user: dict, conn) -> Optional[dict]:
+    expire_time = _parse_datetime(user['expire_time'])
+    if datetime.now() > expire_time:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE global_user_info SET status = '冻结' WHERE user_id = ?", (user['user_id'],))
+        conn.commit()
+        return None
+
+    if user.get('package_type') == '免费版':
+        today = datetime.now().strftime('%Y-%m-%d')
+        if user.get('last_reset_date') != today:
+            free_credits = PACKAGES['免费版'].get('free_credits', 3)
+            old_credits = user.get('credits', 0)
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE global_user_info SET credits = ?, today_generated_count = 0, last_reset_date = ? WHERE user_id = ?",
+                (free_credits, today, user['user_id'])
+            )
+            cursor.execute('''
+                INSERT INTO global_credits_log (user_id, change_amount, change_type, description, balance_after, create_time)
+                VALUES (?, ?, 'daily_reset', '免费版每日积分重置', ?, ?)
+            ''', (user['user_id'], free_credits - old_credits, free_credits, datetime.now().isoformat()))
+            user['credits'] = free_credits
+            conn.commit()
+
+    return user
 
 
 def check_package_limit(user_id: str) -> bool:

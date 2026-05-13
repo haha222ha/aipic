@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 
 from core.auth import activate_auth_code, create_auth_code
-from core.security import rate_limit, get_current_admin, verify_password, _sign_admin_token, _get_client_ip
+from core.security import rate_limit, get_current_admin, verify_password, _sign_admin_token, _get_client_ip, _generate_session_token
 from core.database import global_db_conn, log_admin_operation
 from core.config import PACKAGES
 
@@ -20,7 +20,8 @@ async def activate(request: Request):
         is_secure = request.url.scheme == 'https'
         response = JSONResponse(result)
         response.set_cookie("user_id", result['data']['user_id'], max_age=86400 * 30, httponly=True, samesite="lax", secure=is_secure)
-        response.set_cookie("auth_code", auth_code, max_age=86400 * 30, httponly=True, samesite="lax", secure=is_secure)
+        session_token = _generate_session_token(result['data']['user_id'], auth_code)
+        response.set_cookie("session", session_token, max_age=86400 * 30, httponly=True, samesite="lax", secure=is_secure)
         return response
 
     return result
@@ -56,7 +57,7 @@ async def verify(request: Request):
 async def logout(request: Request):
     response = JSONResponse({"code": 200, "msg": "已退出", "data": None})
     response.delete_cookie("user_id")
-    response.delete_cookie("auth_code")
+    response.delete_cookie("session")
     return response
 
 
